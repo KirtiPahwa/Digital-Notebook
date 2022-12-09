@@ -1,0 +1,118 @@
+we are creating different node modules for frontend and backend because our backend is going to hit more than frontend . So may be we want to put our frontend on weak server and backend on strong server . Our backend api is going to hit many times. And our frontend is just going to hit once.
+
+A.Backend-
+1. index.js-server setup using express 
+2. db.js- creating connection with mongoose and exporting into index.js file
+3. index.js-mongoose connection in db.js and import the function in this file . 
+4. models- creating models and schemas - auth model and note model and exporting them.
+5. index.js- Creating routes and let our app use it by app.use(). (means on /api/auth open this file i.e.,routes/auth and in this part also we are creating more endpoints ie., /api/auth/createUser etc)
+6. Routes- We created the routes in routes folder in auth.js and notes.js. We are creating endpoints here means routes here. If user hits api/auth/createUser using post method(means the data send in the request body that will not be seen in the url and when this endpoint hits ) then our endpoint with this path will be hit. and send the json . So our frontend will use this sent json and display accordingly.
+7. Routes- creating endpoints:
+a. createuser- put some validation (express validations) that if email is not of email type then send error . If we don't handle this errors using proper validation, then our appp can also crash.
+8. validations in create user endpoint- Handle the length, and also uniqueness of email. so for unique email before creating the entry check if the user with the same email already exist or not. 
+9. (Hashing: We should not store password in database in plane text. Because database can be attacked by some hacker and he can get the password and then he can login the user's account and harm him. So to avoid this, our backend will convert this password into hash string by using some hash function and adding some extra salt in it(like adding #adk some string in hash value of password). Hash fuction is one way function that cannot regenerate the password from hash string back.) . So to do this , we import bicrypt.js and use it .
+10. Whenever some user loginned , in return we will not return the user detail of the user. We will give it a token - two types of token- session token, jwt token. So not again and again , user have to pass the details . Instead we will give it a jwt token. So once this user is verified , we dont need to aagin send the details to verify . After logging once, we will just send the jwt token to authenticate. jwt is like a ticket . If some user have this ticket then it will allow the user . (Is not it that user can change the name and have ticket so he will be allowed to authenticate , so it will be problematic. So to pervent this , if user changes the name or password then signatrue of the jwt token will also be changed . So user will not be authenticated then). So during sign in, we are giving jwt token to the user.And we also have to wpass the payload to jwt token.we usuallly pass the user id for the payload of auth token.
+10. Now user can login if and only if the user with existing email and with matched password and then it will give it loginned jwt token to it. The benefit of jwt is it don't need to verify the credentials every time. It will use jwt token.
+11. Now making the getuser endpoint, here login is required. So the endopoit which required authentication there i will send a header with token. so we have to send the authenticaton token and will fetch the id from the token. Now not to repeat the fetched id code from token we are having middleware - fetchuser.
+middleware - It is basically the function which executes after hitting the endpoint and before the callback function of request and response. 
+To use the middle ware, we ill pass the fethcuser functino as 2nd argument in getuser endpoint.
+12. Fetchsuer- Basically middleware is appending user id in the req of the endpoint after verifying the authtoken of the user which is fetched from the header of the req hitting on the getuser or any endpoint. So before responsing to the endpoint, it is appending the user (payload data) in the request. So that endpoint can be easily get the user id from the request.so here middleware is hitt before the endpoints res and req function call. And its appending data in req to get the easier.
+
+13.Notes fetching :
+a. Fetch user endopoint: here also  we required login. So to authenticate the token and then adding id in the request itself , we created  middleware i.e., fetchuser. So we will pass it as 2nd argument. To link the notes with the user, we add user in the schema of notes as well , which is like foreign key used to link the user with notes.
+b. create notes: here we are creating the notes after validating the description and title
+c. update notes: again here we are using the middleware. So for that , we need to update the specific note . So for that , we are passing the id of the note. Means we need the id in the params to hit the update note endpoint.We need to first check if the note with this id exist or not Security case:Suppose here the authenticated user after verifying from fetchuser is trying to update the note of someone else by copying other person's notes id from the inspect->network tab->then api. So we have to verify that the note id which the person is trying to update is his or not . For that we will compare the user id of the note he wants to update and the user's id from the jwt token.(which we alredy inserted in the req of the header by fetch user).
+d. delete note: similarly here also, we will passs the id of the note in the params, not in the req of the header(as like we are passing the user credentials of the user in the req body in post method.). Also verify the note exist or not, also verify that the user is the owner of that note or not.
+
+
+
+frontend:
+
+
+1. Context api
+React have states and components
+Context api:-
+There are so many parent and child components and there are child of child . So its very difficult to track state of child's components of child componets and tracked in parent component... So to track state of child's child , we will make a state in parent and from parent, we will pass to child as props and from this child to its child as props. Where as upper child doesnot need to use this state .So this become painful in complex application where there are multiple heirarchies.
+So to solve this, we use context api. To make this, i will create context() and this is kinda state and it can be used by any child or child to child component. We don't need to send props from parent to child to child . We can directly access any state present in context api at any child component using - use context().
+
+So in context- create NoteContext=createContext() and export it from the file and use it in NoteState where the actual global states will be . In notes provider we will put states which we want to use globally for all componets. And whichever components i put in <NoteState>component1 , component2 </NoteState> , that all component can access the states present in Notestate.
+We can also use state as well as function to update the state in each component using context api.
+And use its state by importing notecontext and use it by useContext(notecontext). 
+
+
+
+2. Use location Hook:- This hook is in the react router dom.It is used to know the location means pathname.It changes whenever the location(params) of the page changes. Eg., localhost/3000/about. So location hook will give '/about' by location.pathname in - Example., it used when we want about to be active (higlighted in navbar) when opened page is about else if home on openend page of home.
+
+3. Making add notes:So made addNote component.For that we have added form. To display the already submitter note, we will map or iterate through the notes from the notestate's state notesinitial. For now i am doing hard code that is adding notes script in the notestate . Later on we will fetch the notes from the backend . To iterate the notes, we made another component noteitem. and passing the current note and its id.
+
+
+Client side function handling:
+4. Now we are adding function to add delete and update note in notestate component.For now, we are not calling api's . So for addNote() in client side, we are concating the new note added by handleclick function in addnotes compnonent into notes of notestate by the help of addNotes in notestate function.
+
+5.Adding delete node function, and we will pass note's id to delete node function and will filter out the notes except that note and reset the notes.
+
+Connecting notes with backend - calling rest api through frontend:
+1.So we fetch api of addnotes with ${host}/api/notes/addnote where host="https://localhost:5000/" with post method , because we have made the endopoint for add notes is with post method and sending data in the body of this request. Using this syntax:const response = await fetch(`${host}/api/notes/addnote`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "auth-token":
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyIjp7ImlkIjoiNjM2OTRkMTA4NDNmYjMxZDk3Njg0YTJkIn0sImlhdCI6MTY2Nzg0NTM5Mn0.sXLRB2I1XGINhtYiTU6a04VOukEmM1rrXULSlWzuzhE",
+      },
+      body: JSON.stringify({ title, description, tag }),
+    });
+The response of this api will be fetched by us on frontend using this fetch api and , we will render this on our page.
+
+One is port for your mongodb ie., localhost:4000 and other is of react frontend app
+Now this localhost:4000 is giving error from origin localhost:3000. Its saying that we cann't directly call this api from browser directly . So we need to add CORS middleware . For that we need to install this in backend. so do- cd backend  ---  npm install cors. We want to enable this cors functionality in backend only. So go in index.js of backend and add cors. as like app.use(cors())
+
+We have to request the api's with that port on which our backend app is listening. Means in addnotes or update note api should be with port which is specified in our server.
+
+We are updating the state of notesinitial also so that without loading the page it can show the note which is added in the database. 
+
+
+2. similarly we call our api for get all notes for notesinitial state: So we call the fetchallnotes api in getnotes function and getnotes function is called in useeffect of notes component . In getnotes fucntion we are settting notesinitial with response json of this fetchallnotes api.
+
+3.Delete node: We hape to call api . So we make a delete request and sending header in the api with autho token. It will hit the endpoint of delete. and also updating the state notesinitial.
+We have added the tag in the form also. 
+
+4. Edit note:We will open a modal on clicking the edit button. So for it first we are importing the modal in notes component. and create updateNote function in it ,in which we will open the modal by function click(). But we want to to open the modal on the edit button which we took in noteitem component. 
+
+So to do that we can use useRef hook which helps to call a function of a component on clicking of other component. Basically , its making to use the functionality of a component on some other component using useRef.
+
+So we pass a update function in noteitem component. And whenever edit icon is clicked, this update function of notes component will be call and will open modal.
+So we made different use state in which there will be etitle,edescription,etag and which will be shown in the modal body's fields.These states are taking text from the current notes information whose edit button is clicked.
+
+Calling api when changes in edit modal is saved.So we will call api with id giving in its params and sending the data in header's body . so now updating in the frontend also by updating the notes state by making deep copy of it firts and make changes in the object and then setnotes(newnotes). Because we cann't directly make changes in the note state object by iterating.
+
+After clicking on the save changes , we need to close the modal . So for that , we made another useref that is refClose which is refering to the close button on modal.And when save button is pressed handleChange function will be ccalled and after editing the note, we will be close the modal by clikcin on the close button by refclose.current.click().
+
+
+5.Adding validation in frontend as like we have added in backend also . For eg., we have added a validatoin that if a title is less than 3  then it will not be added. Similarly instead of giving error in console as backend error , it should give error in frontend.So for this if our title and description length is less than 3 and 5 resp. we will disable button . And also we will add minlenght and required in the input fields but it will not work in edit note form as we have not included the input tag in form tag. But i have included unlike tutorial's.
+
+6. Adding login functinallity: We have added login and signup button and also added router with /login and /signup path. Now working on login.So in login component , we call api with post method and sending just header with body and in body , we are sending email and password. So our login endpoint will send us authtoken if user is valid and will send the success variable true if valid. So that if user is valid we can send alert ,save authtoken in localstorage and redirect if success is valid.Redirect means rendering to the home page . So for that , we are using useNavigate hook , which we can send use at any routing by navigate("/").
+
+For first time user have to login, then we are storing the authtoken in the localstorage. So for the next time, we will not show user login button, if localstorage of user consist valid authtoken already. We will check if authtoken is valid or not . If yes, then user donot have to enter the details. It will show user loggined already.
+WE have added some frontend validations as well. In case if person submit less than 5 length of password and all which we added in backend . But if we dont handle in forntend it will give error to use. So we add minlenght, required in input tag
+
+7.Sign up:
+ We will request createuser api with post method and we'll get response json(authtoken) and success flag true if every validation is valid. So after getting the response and store authtoken from the response in localstorage and redirect to the home page . 
+
+  we need to send success flag (from api) because we  need to check if user with same email already exist or not, then only we are signing here.So store the authtoken in localstorage and redirecting to the main page after success is true.
+
+ 
+ Destructuring rule: if we write ({email,password}) then it means ({email:email,password:password}) but here i have to write credentials.email so have to mention properly email:credentials.email
+
+ Or 
+Destructuring as like this:
+const {email,password,cpassword}=credentials //destructuring 
+then use it in ({email,passowrd }) directly
+
+WE have added some frontend validations as well. In case if person submit less than 5 length of password and all which we added in backend . But if we dont handle in forntend it will give error to use. So we add minlenght, required in input tag.
+
+
+8. Adding alerts:
+We made an alert component in which are passing type and message and in app.js we made a alert state in which intially type ,msg is stored. And we made a showAlert(type,msg).So whenever we update,delete,addnote,editnote,login, we will show alert and these showalert we made in app.js and passing it in all these components-home,notes,addnotes,login,signup,
+
+9.Wrap up :So whereever we have hard coded auth token, we have to replace that and take it from the localstorage and then request with it.
+We added logout functionality in the useeffect if the user is having authtoken in localstorage then it will show logout button else it will show login button and login page only, to continue. And when user logout , we will remove the localstorage. And navigate to the login page.
